@@ -119,9 +119,38 @@ def cluster_selected(pointcloud, labels):
 
 
 
+def get_cluster_dimensions(cluster, scale=1):
+    x_axis = [x[0] for x in cluster]
+    y_axis = [x[1] for x in cluster]
+    z_axis = [x[2] for x in cluster]
+    
+    x_size = (max(x_axis) - min(x_axis)) * scale 
+    y_size = (max(y_axis) - min(y_axis)) * scale
+    z_size = (max(z_axis) - min(z_axis)) * scale
+    
+    centroid = [(max(x_axis) + min(x_axis)) / 2, (max(y_axis) + min(y_axis)) / 2, (max(z_axis) + min(z_axis)) / 2]
+    
+    return (x_size, y_size, z_size, centroid)
+
+
+
+def write_centroinds(points, labels):
+    with open('data.csv', 'w') as f:
+        f.write('label;x_size;y_size;z_size;centroid;num_points\n')
+
+        for label in set(labels):
+            cluster_points = []
+            for i in range(len(points)):
+                if labels[i] == label:
+                    cluster_points.append(points[i])
+
+            x_size, y_size, z_size, centroid = get_cluster_dimensions(cluster_points)
+            f.write("{};{};{};{};{};{}\n".format(label, x_size, y_size, z_size, centroid, len(cluster_points)))
+
+
 
 if __name__ == "__main__":
-    las = laspy.read('data/banska2.las')
+    las = laspy.read('data/banska4.las')
     tree_data = las[las.classification == 5]
 
     avg_ground_height = get_ground_height(las)
@@ -136,8 +165,11 @@ if __name__ == "__main__":
     pointcloud.colors = o3d.utility.Vector3dVector(paint_vertices(labels))
     o3d.visualization.draw_geometries([pointcloud])
 
+    all_points = []
     for i in range(3):
         all_points, labels = cluster_selected(pointcloud, labels)
         pointcloud.points = o3d.utility.Vector3dVector(all_points)
         pointcloud.colors = o3d.utility.Vector3dVector(paint_vertices(labels))
         o3d.visualization.draw_geometries([pointcloud])
+    
+    write_centroinds(all_points, labels)
